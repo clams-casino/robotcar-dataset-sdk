@@ -7,22 +7,24 @@ from image import load_image
 from camera_model import CameraModel
 
 
-def rectifiy_images(img_dir, models_dir, grayscale=True):
+def demosaic_images(img_dir, models_dir, grayscale=True, rectify=False):
     """rectifies all images and saves to a new directory 
 
         Args:
             images_dir (str): directory containing images for which to read camera model.
             models_dir (str): directory containing camera model files.
+            grayscale (bool): save the demosaiced images in grayscale if True
+            rectify (bool): rectify the images using a camera model if True
         
     """
     camera = re.search('(stereo|mono_(left|right|rear))', img_dir).group(0)
 
-    model = CameraModel(models_dir, img_dir)
+    model = CameraModel(models_dir, img_dir) if rectify else None
 
-    rectified_dir = img_dir +'_rectified'
-    if not os.path.isdir(rectified_dir):
-        print('Creating new directory for rectified images: {}'.format(rectified_dir))
-        os.mkdir(rectified_dir)
+    demosaiced_dir = img_dir +'_demosaiced'
+    if not os.path.isdir(demosaiced_dir):
+        print('Creating new directory for demosaiced images: {}'.format(demosaiced_dir))
+        os.mkdir(demosaiced_dir)
 
     timestamps_path = os.path.join(os.path.join(img_dir, os.pardir, camera + '.timestamps'))
     if not os.path.isfile(timestamps_path):
@@ -37,9 +39,9 @@ def rectifiy_images(img_dir, models_dir, grayscale=True):
 
         img = load_image(os.path.join(img_dir, filename), model)
         if grayscale:
-            plt.imsave(os.path.join(rectified_dir, filename), cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), cmap='gray')
+            plt.imsave(os.path.join(demosaiced_dir, filename), cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), cmap='gray')
         else:
-            plt.imsave(os.path.join(rectified_dir, filename), img)
+            plt.imsave(os.path.join(demosaiced_dir, filename), img)
         
 
 if __name__ == '__main__':
@@ -50,4 +52,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    rectifiy_images(args.dir, args.models_dir, grayscale=True)
+    demosaic_images(args.dir, args.models_dir, grayscale=True, rectify=False)
