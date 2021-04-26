@@ -11,7 +11,7 @@ import rospy
 from cv_bridge import CvBridge
 bridge = CvBridge()
 
-def write_rosbag(bag, topic_name, img_dir, models_dir, grayscale=True, rectify=False):
+def write_rosbag(bag, topic_name, img_dir, models_dir, grayscale=True, rectify=False, compressed=False):
     """rectifies all images in img_dir and writes them to the bag with timestamps
 
         Args:
@@ -43,7 +43,11 @@ def write_rosbag(bag, topic_name, img_dir, models_dir, grayscale=True, rectify=F
         if grayscale:
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-        img_msg = bridge.cv2_to_compressed_imgmsg(img, dst_format='jpeg')
+        if compressed:
+            img_msg = bridge.cv2_to_compressed_imgmsg(img, dst_format='jpeg')
+        else:
+            img_msg = bridge.cv2_to_imgmsg(img, encoding='passthrough')
+
         msg_timestamp = rospy.Time.from_sec(timestamp)
         img_msg.header.stamp = msg_timestamp
         bag.write(topic_name, img_msg, msg_timestamp)
@@ -54,16 +58,19 @@ if __name__ == '__main__':
 
     parser.add_argument('dir', type=str, help='Directory of the dataset.')
     parser.add_argument('models_dir', type=str, default=None, help='Directory containing camera model.')
+    parser.add_argument('--compressed', action='store_true', help='write compressed images')
 
     args = parser.parse_args()
 
     bag = rosbag.Bag('test.bag', 'w')
 
-    cameras = ['mono_left', 'mono_rear', 'mono_right']
+    cameras = ['mono_left', 'mono_rear', 'mono_right'] 
+    # cameras = ['mono_left', 'mono_right'] 
 
     for camera in cameras:
         img_dir = os.path.join(args.dir, camera)
-        write_rosbag(bag, camera, img_dir, args.models_dir, grayscale=True, rectify=True)
+        topic = '/' + camera + ('/compressed' if args.compressed else '/image_raw')
+        write_rosbag(bag, topic, img_dir, args.models_dir, grayscale=True, rectify=True, compressed=args.compressed)
 
     bag.close()
 
